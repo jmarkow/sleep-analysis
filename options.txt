@@ -3,7 +3,11 @@
 sigma_t=2.5
 convert_fs=10000
 convert_anti_alias=4000
-convert_dry_run=1
+convert_fs_mic=20000
+convert_anti_alias_mic=9000
+convert_dry_run=0
 convert_gain_factor=1000
-datefmt=yymmdd_HHMMSS
+convert_rec_id=barecarbon
+datefmt=yyyy-mm-dd
+file_datefmt=yymmdd_HHMMSS
 

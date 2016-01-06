@@ -9,10 +9,11 @@ bird_delim='&';
 log_file(1).field='logfile';
 log_file(1).filename='log.txt';
 log_file(1).multi=0;
-
+base_filename='sleepdata1';
 par_save = @(FILE,data) save(FILE,'data');
 % returns filenames to process and their associated log file
 
+[options,dirs]=sleep_preflight;
 filenames=robofinch_dir_recurse(pwd,'data_*.mat',[],[],log_file);
 [log_names,~,log_id]=unique({filenames(:).logfile});
 
@@ -22,7 +23,6 @@ cur_file=mfilename('fullpath');
 [cur_path,~,~]=fileparts(cur_file);
 
 [aliases.targets,aliases.sources,aliases.date_targets,aliases.date_sources]=sleep_read_aliases(fullfile(cur_path,alias_name));
-[dirs,options]=sleep_preflight;
 
 for i=1:length(log_names)
 
@@ -72,43 +72,10 @@ for i=1:length(log_names)
 		continue;
 	end
 
-	% construct new filename using new format
-
-	base_filename='';
-
-	for j=1:length(log_map)
-
-		if isempty(log_map(j).ch)
-			continue;
-		end
-
-		log_map(j).ch.idx=log_map(j).ch.idx-1; % subtract 1 to match NIDAQ indexing
-
-		if j>1
-			base_filename=[ base_filename bird_delim ];
-		end
-
-		base_filename=[ base_filename log_map(j).name delim recid ];
-
-		if any(log_map(j).ch.ismic)
-			base_filename=[ base_filename sprintf('%smic%iadc',delim,log_map(j).ch.idx(log_map(j).ch.ismic)) ];
-		end
-
-		if any(~log_map(j).ch.ismic)
-
-			idxs=log_map(j).ch.idx(find(~log_map(j).ch.ismic));
-			idxs=sort(idxs);
-
-			if length(idxs)>1
-				base_filename=[ base_filename sprintf('%sdata%i-%iadc',delim,idxs(1),idxs(end)) ];
-			else
-				base_filename=[ base_filename sprintf('%sdata%iadc',delim,idxs) ];
-			end
-		end
-
-	end
-
 	% scan for aliases, convert dates to datenums
+
+	load(files_to_proc(1).name,'data');
+	original_start_time=data.start_time;
 
 	parfor j=1:length(files_to_proc)
 
@@ -135,47 +102,72 @@ for i=1:length(log_names)
 		data=tmp.data;
 		tmp=[];
 
-		[nsamples,nchannels]=size(data.voltage);
+		% write directly to appropriate directory
 
-		data2.voltage=data.voltage;	% resample at sensible frequency
+		for k=1:length(log_map)
 
-		data2.time=data.time-min(data.time);
-		data2.start_time=data.start_time;
-		data2.start_time(end)=data2.start_time(end)+data.time(1);
-		data2.fs=data.sampling_rate;
-		data2.labels=[0:nchannels-1];
-		data2.names=map.names;
+			log_map(k).ch.idx(log_map(k).ch.ismic)
+			log_map(k).ch.idx(~log_map(k).ch.ismic)
 
-		decimate_f=round(data2.fs/options.convert_fs);
-		%cutoff=.8*(data2.fs/2)/decimate_f
-		cutoff=options.convert_anti_alias/(data2.fs/2);
-		[b,a]=ellip(4,.2,40,cutoff,'low');
+			data2.audio.labels=0;
+			data2.audio.data=data.voltage(:,log_map(k).ch.idx(log_map(k).ch.ismic));
+			data2.audio.fs=data.sampling_rate;
+			data2.audio.t=data.time-min(data.time);
+			data2.audio.names=map.names(log_map(k).ch.idx(log_map(k).ch.ismic));
 
-		data2.voltage=downsample(filtfilt(b,a,data2.voltage),decimate_f);
-		data2.time=downsample(data2.time,decimate_f);
-		data2.fs=options.convert_fs;
+			data2.adc.labels=[1:sum(~log_map(k).ch.ismic)];
+			data2.adc.data=data.voltage(:,log_map(k).ch.idx(~log_map(k).ch.ismic));
+			data2.adc.fs=data2.audio.fs;
+			data2.adc.t=data2.audio.t;
+			data2.adc.names=map.names(log_map(k).ch.idx(~log_map(k).ch.ismic));
 
-		% store all relevant info
+			decimate_f=round(data2.adc.fs/options.convert_fs);
+			cutoff=options.convert_anti_alias/(data2.adc.fs/2);
+			[b,a]=ellip(4,.2,40,cutoff,'low');
 
-		data2.parameters.units=repmat({'Volts'},[1 nchannels]);
-		data2.parameters.sensor_range=[-10 10];
-		data2.parameters.input_range=[-10 10];
-		data2.parameters.units_range=[-10 10];
-		data2.parameters.amp_gain=options.convert_gain_factor;
-		data2.parameters.gain_correct=false; % we did not yet adjust the ephys data by amp gain
+			data2.adc.data=downsample(filtfilt(b,a,data2.adc.data),decimate_f);
+			data2.adc.t=downsample(data2.adc.t,decimate_f);
+			data2.adc.fs=options.convert_fs;
 
-		new_filename=[ base_filename delim datestr(datenum(data2.start_time),options.datefmt) '.mat' ];
+			decimate_f=round(data2.audio.fs/options.convert_fs_mic);
+			cutoff=options.convert_anti_alias_mic/(data2.audio.fs/2);
+			[b,a]=ellip(4,.2,40,cutoff,'low');
 
-		% get names for each channel
+			data2.audio.data=downsample(filtfilt(b,a,data2.audio.data),decimate_f);
+			data2.audio.t=downsample(data2.audio.t,decimate_f);
+			data2.audio.fs=options.convert_fs_mic;
 
-		data=data2;
-		data2=[];
+			% store all relevant info
 
-		sleep_par_save(fullfile(dirs.convert_dir,new_filename),data);
+			data2.file_datenum=data.start_time;
 
+			data2.parameters.units=repmat({'Volts'},[1 length(log_map(k).ch.idx)]);
+			data2.parameters.sensor_range=[-10 10];
+			data2.parameters.input_range=[-10 10];
+			data2.parameters.units_range=[-10 10];
+			data2.parameters.amp_gain=options.convert_gain_factor;
+			data2.parameters.gain_correct=false; % we did not yet adjust the ephys data by amp gain
+
+			new_filename=[ base_filename delim log_map(k).name delim ...
+			 datestr(datenum(data.start_time),options.file_datefmt) '.mat' ];
+
+			% get names for each channel
+
+			save_dir=fullfile(dirs.data_dir,log_map(k).name,...
+				datestr(datenum(original_start_time),options.datefmt),'sleep');
+
+			if ~exist(save_dir,'dir')
+				mkdir(save_dir);
+			end
+
+			sleep_par_save(fullfile(save_dir,new_filename),data2);
+
+			data2=[];
+
+		end
 	end
 
-	fid=fopen(fullfile(log_path,'.convert_complete'),'w');
-	fclose(fid);
+	%fid=fopen(fullfile(log_path,'.convert_complete'),'w');
+	%fclose(fid);
 
 end
