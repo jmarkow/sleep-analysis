@@ -1,0 +1,9 @@
+# conversion options
+
+sigma_t=2.5
+convert_fs=10000
+convert_anti_alias=4000
+convert_dry_run=1
+convert_gain_factor=1000
+datefmt=yymmdd_HHMMSS
+
