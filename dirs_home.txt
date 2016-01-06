@@ -1,5 +1,5 @@
 #
-#convert_dir->source of sleep data, data_dir->where to put processed data
+#folder for converted files
 
 convert_dir=/Volumes/stone_age/carbon_fiber_data/chronic_data
 data_dir=/Volumes/industrial_age/workspace/ephys_barecarbon_sleep
