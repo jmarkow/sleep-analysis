@@ -167,7 +167,7 @@ for i=1:length(log_names)
 		end
 	end
 
-	%fid=fopen(fullfile(log_path,'.convert_complete'),'w');
-	%fclose(fid);
+	fid=fopen(fullfile(log_path,'.convert_complete'),'w');
+	fclose(fid);
 
 end
