@@ -1,6 +1,10 @@
-function sleep_mat_batch()
+function sleep_mat_batch(TIME_SWITCH)
 % searches for mat files and associated log files, processes and copies to target directory
 %
+
+if nargin<1
+	TIME_SWITCH=false;
+end
 
 alias_name='aliases.txt';
 recid='barecarbon';
@@ -38,7 +42,7 @@ for i=1:length(log_names)
 	[log_path,~,~]=fileparts(log_names{i});
 
 	if exist(fullfile(log_path,'.convert_complete'),'file');
-		continue;
+		%continue;
 	end
 
 	for j=1:length(log_map)
@@ -75,7 +79,7 @@ for i=1:length(log_names)
 	% scan for aliases, convert dates to datenums
 
 	load(files_to_proc(1).name,'data');
-	original_start_time=data.start_time;
+	original_start_time=datenum(data.start_time);
 
 	parfor j=1:length(files_to_proc)
 
@@ -102,17 +106,18 @@ for i=1:length(log_names)
 		data=tmp.data;
 		tmp=[];
 
+		if ~TIME_SWITCH
+			original_start_time=datenum(data.start_time);
+		end
+
 		% write directly to appropriate directory
 
 		for k=1:length(log_map)
 
-			log_map(k).ch.idx(log_map(k).ch.ismic)
-			log_map(k).ch.idx(~log_map(k).ch.ismic)
-
 			data2.audio.labels=0;
 			data2.audio.data=data.voltage(:,log_map(k).ch.idx(log_map(k).ch.ismic));
 			data2.audio.fs=data.sampling_rate;
-			data2.audio.t=data.time-min(data.time);
+			data2.audio.t=data.time;
 			data2.audio.names=map.names(log_map(k).ch.idx(log_map(k).ch.ismic));
 
 			data2.adc.labels=[1:sum(~log_map(k).ch.ismic)];
@@ -137,10 +142,15 @@ for i=1:length(log_names)
 			data2.audio.t=downsample(data2.audio.t,decimate_f);
 			data2.audio.fs=options.convert_fs_mic;
 
-			% store all relevant info
+			% store all relevant info, note that the file date
 
-			data2.file_datenum=data.start_time;
+			if ~TIME_SWITCH
+				data2.parameters.file_datenum=original_start_time+(data.time(1)-1/data.sampling_rate)/86400;
+			else
+				data2.parameters.file_datenum=data.start_time;
+			end
 
+			data2.parameters.rec_start_datenum=original_start_time;
 			data2.parameters.units=repmat({'Volts'},[1 length(log_map(k).ch.idx)]);
 			data2.parameters.sensor_range=[-10 10];
 			data2.parameters.input_range=[-10 10];
@@ -149,7 +159,7 @@ for i=1:length(log_names)
 			data2.parameters.gain_correct=false; % we did not yet adjust the ephys data by amp gain
 
 			new_filename=[ base_filename delim log_map(k).name delim ...
-			 datestr(datenum(data.start_time),options.file_datefmt) '.mat' ];
+			 datestr(datenum(data2.parameters.file_datenum),options.file_datefmt) '.mat' ];
 
 			% get names for each channel
 
