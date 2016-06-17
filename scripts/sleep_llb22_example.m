@@ -29,5 +29,6 @@ for i=1:length(listing)
   [spikes_night{i},spikeless_night{i}]=spikoclust_sort(ephys.data(:,:,ephys.labels==14),ephys.fs,...
     'clust_check',2,'sigma_t',4,'freq_range',[700],'usermodel',spikes_day{1}.model);
   spikes_night_datenums{i}=file_datenum;
+  spikes_night_extract_length=size(ephys.data,1);
   clear ephys file_datenum;
 end
