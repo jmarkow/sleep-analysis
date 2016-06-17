@@ -31,3 +31,5 @@ for i=1:length(listing)
   spikes_night_datenums{i}=file_datenum;
   clear ephys file_datenum;
 end
+
+% prepare data for running xcorr (simply take the top N hits from the sleep data)
