@@ -32,3 +32,5 @@ for i=1:length(listing)
   spikes_night_extract_length=size(ephys.data,1);
   clear ephys file_datenum;
 end
+
+% prepare data for running xcorr (simply take the top N hits from the sleep data)
