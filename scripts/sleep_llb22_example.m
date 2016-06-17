@@ -10,13 +10,14 @@ root_dir='/Volumes/RUGGEDBOD/llb22_sleepexample';
 load(fullfile(root_dir,'singing_data_01','roboaggregate.mat'),'ephys');
 [spikes_day{1},spikeless_day{1}]=spikoclust_sort(ephys.data(:,:,ephys.labels==14),ephys.fs,...
   'clust_check',2,'sigma_t',4,'freq_range',[700]);
+spikes_day{1}.parameters.raw_data_sz=size(ephys.data);
 clear ephys;
 
 load(fullfile(root_dir,'singing_data_02','roboaggregate.mat'),'ephys');
 [spikes_day{2},spikeless_day{2}]=spikoclust_sort(ephys.data(:,1:40,ephys.labels==14),ephys.fs,...
   'clust_check',2,'sigma_t',4,'freq_range',[700],'usermodel',spikes_day{1}.model);
 spikes_day_extract_length=size(ephys.data,1);
-
+spikes_day{2}.parameters.raw_data_sz=size(ephys.data);
 clear ephys;
 
 % list all files in the sleep folder
@@ -29,8 +30,8 @@ for i=1:length(listing)
   [spikes_night{i},spikeless_night{i}]=spikoclust_sort(ephys.data(:,:,ephys.labels==14),ephys.fs,...
     'clust_check',2,'sigma_t',4,'freq_range',[700],'usermodel',spikes_day{1}.model);
   spikes_night_datenums{i}=file_datenum;
-  spikes_night_extract_length=size(ephys.data,1);
+  spikes_night{i}.parameters.raw_data_sz=size(ephys.data);
   clear ephys file_datenum;
 end
 
-% prepare data for running xcorr (simply take the top N hits from the sleep data)
+% save data
