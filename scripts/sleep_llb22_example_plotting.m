@@ -17,6 +17,7 @@ use_data=norm_extractions;
 tvec=[1:size(norm_extractions,1)]./bin_fs;
 
 fig.night_clustergram=figure();
+ax=[];
 ax(1)=subplot(10,1,1);
 imagesc(tvec,[],norm_template');
 axis off;

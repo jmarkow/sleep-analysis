@@ -5,6 +5,7 @@
 bin_fs=500;
 npeaks=100;
 padding=.2;
+spikes_fs=25e3;
 
 % we should probably smooth...
 
